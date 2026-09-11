@@ -1,0 +1,426 @@
+// BASE Malaya Club — data model
+// Docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------- Enums ----------
+
+enum Role {
+  ADMIN
+  MEMBER
+}
+
+enum UserStatus {
+  PENDING   // submitted application, awaiting admin review
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+enum Permission {
+  MEDIA_UPLOAD    // photographer: can upload photos (and video later)
+  EVENT_MANAGE    // delegate event management without full admin access
+  CONTENT_MANAGE  // can edit news and education articles
+  USER_MANAGE     // can approve applications and manage users (moderator role)
+}
+
+enum ObjectType {
+  BUILDING
+  ANTENNA
+  SPAN
+  EARTH
+}
+
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  CANCELLED
+  COMPLETED
+}
+
+enum RegistrationStatus {
+  REGISTERED
+  WAITLISTED
+  CANCELLED
+  ATTENDED
+  NO_SHOW
+}
+
+// Placeholder for Option 1 (payments added later). Null in MVP.
+enum PaymentStatus {
+  NOT_REQUIRED
+  PENDING
+  PAID
+  REFUNDED
+}
+
+enum PostType {
+  NEWS
+  EDUCATION
+}
+
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO // reserved for future video support; not used in MVP
+}
+
+enum MediaStatus {
+  READY
+  PROCESSING // for future video transcoding pipeline
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+// ---------- Auth.js (NextAuth) adapter ----------
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ---------- Users / RBAC ----------
+
+model User {
+  id             String     @id @default(cuid())
+  email          String     @unique
+  username       String?    @unique // public handle for /members/<username>
+  emailVerified  DateTime?
+  name           String?             // single name field (first + last)
+  image          String?             // avatar URL in R2
+  hashedPassword String?             // for email + password sign-in
+
+  role   Role       @default(MEMBER)
+  status UserStatus @default(PENDING)
+
+  // BASE jumper profile
+  bio              String?
+  country          String?
+  gender           Gender?            // used for event registration and statistics
+  birthDate        DateTime? // used for youngest/oldest participant awards at events
+  baseJumpCount    Int?      @default(0)
+  skydiveJumpCount Int?      @default(0)
+  baseSince        DateTime?          // month started BASE (stored as 1st of month)
+  skydiveSince     DateTime?          // month started skydiving
+  participatedBasejumpInMalaysia Boolean? // answered at registration
+  homeCity         String?            // reserved for future use
+  showInMembersDirectory Boolean @default(true) // admin can hide photographers / non-directory members
+  showBirthDatePublicly  Boolean @default(false) // show age & date of birth on public profile
+  personalDataConsentAt  DateTime?                // when user agreed to data processing
+  // TODO: add bloodType String? and tshirtSize String? when event registration needs them
+
+  // social links
+  instagram String?
+  facebook  String?
+  whatsapp  String?
+  telegram  String?
+
+  // voucher — required by the application form, nullable in DB for admin bootstrapping
+  vouchedById String?
+  voucher     User?   @relation("Vouches", fields: [vouchedById], references: [id])
+  voucherNote String?
+  vouchedFor  User[]  @relation("Vouches")
+
+  // application review audit trail
+  appliedAt       DateTime  @default(now())
+  reviewedAt      DateTime?
+  reviewedById    String?
+  reviewedBy      User?     @relation("ApplicationReviews", fields: [reviewedById], references: [id])
+  rejectionReason String?
+  reviewedUsers   User[]    @relation("ApplicationReviews")
+
+  permissions   UserPermission[]
+  registrations EventRegistration[]
+  uploadedMedia Media[]             @relation("MediaUploader")
+  authoredPosts Post[]              @relation("PostAuthor")
+  createdEvents      Event[]             @relation("EventCreator")
+  eventPhotographer  EventPhotographer[] @relation("EventPhotographerUser")
+  auditLogs          AuditLog[]          @relation("AuditActor")
+
+  accounts Account[]
+  sessions Session[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model UserPermission {
+  id          String     @id @default(cuid())
+  userId      String
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission  Permission
+  grantedById String?
+  grantedAt   DateTime   @default(now())
+
+  @@unique([userId, permission])
+}
+
+// ---------- Static pages (club history, about) ----------
+
+model Page {
+  id        String   @id @default(cuid())
+  slug      String   @unique // e.g. "history", "about"
+  title     String
+  body      String            // markdown / rich text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ---------- Posts (news + education articles) ----------
+
+model Post {
+  id           String     @id @default(cuid())
+  type         PostType
+  status       PostStatus @default(DRAFT)
+  slug         String     @unique
+  title        String
+  excerpt      String?
+  body         String
+  coverImageId String?
+  coverImage   Media?     @relation("PostCover", fields: [coverImageId], references: [id])
+  authorId     String
+  author       User       @relation("PostAuthor", fields: [authorId], references: [id])
+  publishedAt  DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([type, status, publishedAt])
+}
+
+// ---------- BASE objects (KL Tower, Merdeka 118, …) ----------
+
+model BaseObject {
+  id           String     @id @default(cuid())
+  slug         String     @unique
+  name         String
+  type         ObjectType
+  description  String?
+  heightMeters Int?
+  city         String?
+  latitude     Float?     // reserved for future map feature
+  longitude    Float?
+  coverImageId String?
+  coverImage   Media?     @relation("ObjectCover", fields: [coverImageId], references: [id])
+  isActive     Boolean    @default(true)
+
+  events     Event[]
+  mediaLinks ObjectMedia[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ---------- Events ----------
+
+model Event {
+  id          String      @id @default(cuid())
+  slug        String      @unique
+  title       String
+  description String?
+  status      EventStatus @default(DRAFT)
+  startDate   DateTime
+  endDate     DateTime?
+  capacity    Int?
+
+  objectId String?
+  object   BaseObject? @relation(fields: [objectId], references: [id])
+
+  coverImageId String?
+  coverImage   Media?  @relation("EventCover", fields: [coverImageId], references: [id])
+
+  // Visibility toggles
+  visiblePublic    Boolean @default(false) // listed on public site (guests + members)
+  visibleMembers   Boolean @default(false) // visible to approved logged-in members
+  schedulePublic   Boolean @default(false) // schedule visible to non-members
+  summaryPublic    Boolean @default(false) // "X jumpers from Y countries" visible to all
+  wallOfFamePublic Boolean @default(false) // wall of fame visible to all; snapshot taken on enable
+
+  // Schedule (free-text for MVP; could be replaced with structured blocks later)
+  schedule String?
+
+  // Payment Option 1: schema is ready, implementation comes later.
+  requiresPayment Boolean @default(false)
+  price           Int?    // smallest currency unit (cents); null = free
+  currency        String? // ISO 4217, e.g. "USD"
+
+  createdById String
+  createdBy   User   @relation("EventCreator", fields: [createdById], references: [id])
+
+  registrations  EventRegistration[]
+  mediaLinks     EventMedia[]
+  photographers  EventPhotographer[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, startDate])
+}
+
+// Per-event photographer assignment — upload access persists until admin removes it.
+model EventPhotographer {
+  id      String @id @default(cuid())
+  eventId String
+  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  userId  String
+  user    User   @relation("EventPhotographerUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  assignedAt DateTime @default(now())
+
+  @@unique([eventId, userId])
+  @@index([userId])
+}
+
+model EventRegistration {
+  id      String             @id @default(cuid())
+  eventId String
+  event   Event              @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  userId  String
+  user    User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status  RegistrationStatus @default(REGISTERED)
+
+  // Payment Option 1: null in MVP; wired to a Payment model later.
+  paymentStatus PaymentStatus?
+  amountPaid    Int?
+  currency      String?
+
+  // Wall of fame: event-specific photo (required if user has no avatar).
+  // TODO: clarify minimum photo resolution requirements with Malaysian BASE community for banner printing.
+  eventPhotoKey   String? // R2 key for high-res wall of fame photo
+  profileSnapshot Json?   // snapshot at the time wallOfFamePublic was enabled:
+                          // { name, country, baseJumpCount, skydiveJumpCount,
+                          //   baseSince, skydiveSince, instagram, photoUrl }
+
+  registeredAt DateTime  @default(now())
+  cancelledAt  DateTime?
+
+  @@unique([eventId, userId]) // prevent duplicate registrations
+  @@index([eventId, status])
+}
+
+// ---------- Media (gallery: photos in MVP, video later) ----------
+
+model Media {
+  id     String      @id @default(cuid())
+  type   MediaType   @default(IMAGE)
+  status MediaStatus @default(READY)
+
+  storageKey String  @unique // Cloudflare R2 object key — source of truth for the file location
+  // url is intentionally NOT stored. Compute it via mediaService.toDto(media) or
+  // storageProvider.getPublicUrl(storageKey). This keeps the DB independent of CDN domain.
+  // TODO: verify actual MIME type via magic bytes after upload (currently trusted from client)
+  mimeType   String?
+  sizeBytes  Int?
+  width      Int?
+  height     Int?
+  caption    String?
+
+  uploadedById String
+  uploadedBy   User   @relation("MediaUploader", fields: [uploadedById], references: [id])
+
+  createdAt DateTime @default(now())
+
+  // Collection membership via join tables.
+  // Today: @@unique(mediaId) enforces 1-to-N. Later: drop @@unique for true M-to-N.
+  eventLinks  EventMedia[]
+  objectLinks ObjectMedia[]
+
+  // Cover images use direct FKs — one designated image per entity, not a collection.
+  postCovers   Post[]       @relation("PostCover")
+  eventCovers  Event[]      @relation("EventCover")
+  objectCovers BaseObject[] @relation("ObjectCover")
+
+  @@index([type, createdAt])
+}
+
+// TODO: Storage Cleanup Job — periodically list R2 objects older than 1h, cross-reference
+// with Media.storageKey, delete R2 objects with no matching Media record (orphans from
+// abandoned intent→upload flows where confirm was never called).
+
+// Media↔Event join table. Remove @@unique([mediaId]) to upgrade to M-to-N without data migration.
+model EventMedia {
+  id        String   @id @default(cuid())
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  mediaId   String
+  media     Media    @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@unique([mediaId])
+  @@index([eventId])
+}
+
+// Media↔BaseObject join table. Same upgrade path as EventMedia.
+model ObjectMedia {
+  id        String     @id @default(cuid())
+  objectId  String
+  object    BaseObject @relation(fields: [objectId], references: [id], onDelete: Cascade)
+  mediaId   String
+  media     Media      @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  sortOrder Int        @default(0)
+  showInGallery Boolean @default(false) // admin opt-in: jump photos appear on /gallery
+  createdAt DateTime   @default(now())
+
+  @@unique([mediaId])
+  @@index([objectId])
+  @@index([showInGallery])
+}
+
+// ---------- Audit log ----------
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?  // null = system-initiated action
+  actor      User?    @relation("AuditActor", fields: [actorId], references: [id])
+  action     String   // e.g. "event.delete", "user.approve"
+  targetType String?  // e.g. "Event", "User"
+  targetId   String?
+  metadata   Json?    // arbitrary details about the change
+  createdAt  DateTime @default(now())
+
+  @@index([targetType, targetId])
+  @@index([actorId, createdAt])
+}
