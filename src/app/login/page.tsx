@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
-
-import { auth } from "@/auth";
+import { redirectIfAuthenticated } from "@/lib/auth-session";
 import { LoginForm } from "@/components/auth/login-form";
 import {
   Card,
@@ -15,8 +13,7 @@ import {
 export const metadata: Metadata = { title: "Sign in" };
 
 export default async function LoginPage() {
-  const session = await auth();
-  if (session?.user) redirect("/me");
+  await redirectIfAuthenticated();
 
   return (
     <div className="mx-auto max-w-sm px-4 py-20">

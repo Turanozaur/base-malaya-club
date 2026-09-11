@@ -1,14 +1,11 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
-
-import { auth } from "@/auth";
+import { redirectIfAuthenticated } from "@/lib/auth-session";
 import { RegisterForm } from "@/components/auth/register-form";
 
 export const metadata: Metadata = { title: "Join the club" };
 
 export default async function RegisterPage() {
-  const session = await auth();
-  if (session?.user) redirect("/me");
+  await redirectIfAuthenticated();
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-12">

@@ -2,14 +2,14 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-import { auth } from "@/auth";
+import { getValidSessionUser } from "@/lib/auth-session";
 import { Role } from "@/generated/prisma/client";
 import { adminNav } from "@/lib/admin-nav";
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
-  const session = await auth();
+  const validSession = await getValidSessionUser();
 
-  if (!session?.user || session.user.role !== Role.ADMIN) {
+  if (!validSession || validSession.user.role !== Role.ADMIN) {
     redirect("/");
   }
 

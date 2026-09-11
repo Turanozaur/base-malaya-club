@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
-
-import { auth } from "@/auth";
+import { redirectIfAuthenticated } from "@/lib/auth-session";
 import { SetPasswordForm } from "@/components/auth/set-password-form";
 import { validatePasswordSetupToken } from "@/lib/password-setup";
 import { SITE_CONTACT_EMAIL } from "@/lib/site-config";
@@ -22,8 +20,7 @@ type Props = {
 };
 
 export default async function SetPasswordPage({ searchParams }: Props) {
-  const session = await auth();
-  if (session?.user) redirect("/me");
+  await redirectIfAuthenticated();
 
   const { token } = await searchParams;
   const valid = token ? await validatePasswordSetupToken(token) : null;

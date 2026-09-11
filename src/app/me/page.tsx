@@ -1,9 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
-
-import { auth } from "@/auth";
-import { prisma } from "@/lib/prisma";
+import { requireSessionUser } from "@/lib/auth-session";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -35,16 +32,11 @@ export default async function MePage({
 }: {
   searchParams: Promise<{ passwordUpdated?: string }>;
 }) {
-  const session = await auth();
-  if (!session?.user) redirect("/login");
-
   const { passwordUpdated } = await searchParams;
 
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
+  const { user } = await requireSessionUser({
     include: { permissions: true, voucher: true },
   });
-  if (!user) redirect("/login");
 
   const yearsInBase =
     user.baseSince != null ? fullYearsSince(user.baseSince) : null;

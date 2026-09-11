@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
-
-import { auth } from "@/auth";
+import { requireSessionUser } from "@/lib/auth-session";
 import { ChangePasswordForm } from "@/components/auth/change-password-form";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,8 +14,7 @@ import {
 export const metadata: Metadata = { title: "Change password" };
 
 export default async function ChangePasswordPage() {
-  const session = await auth();
-  if (!session?.user) redirect("/login");
+  await requireSessionUser();
 
   return (
     <div className="mx-auto max-w-sm px-4 py-12">

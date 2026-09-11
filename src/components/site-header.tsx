@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { auth } from "@/auth";
+import { getValidSessionUser } from "@/lib/auth-session";
 import { mainNav } from "@/lib/nav";
 import { Role } from "@/generated/prisma/client";
 import { Button } from "@/components/ui/button";
@@ -10,9 +10,9 @@ import { AdminMenu } from "@/components/admin-menu";
 import { SiteMobileNav } from "@/components/site-mobile-nav";
 
 export async function SiteHeader() {
-  const session = await auth();
-  const signedIn = Boolean(session?.user);
-  const isAdmin = session?.user?.role === Role.ADMIN;
+  const validSession = await getValidSessionUser();
+  const signedIn = Boolean(validSession);
+  const isAdmin = validSession?.user.role === Role.ADMIN;
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border/40 bg-background/45 backdrop-blur-md supports-[backdrop-filter]:bg-background/35">
