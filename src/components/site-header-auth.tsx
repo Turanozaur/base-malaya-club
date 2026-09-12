@@ -8,6 +8,7 @@ import { Role, UserStatus } from "@/lib/constants/user";
 import { Button } from "@/components/ui/button";
 import { AdminMenu } from "@/components/admin-menu";
 import { SiteMobileNav } from "@/components/site-mobile-nav";
+import { usePendingApplicationsCount } from "@/hooks/use-pending-applications-count";
 
 export function SiteHeaderAuth() {
   const { data: session, status } = useSession();
@@ -17,11 +18,12 @@ export function SiteHeaderAuth() {
     Boolean(session?.user?.id) &&
     session.user.status === UserStatus.APPROVED;
   const isAdmin = session?.user?.role === Role.ADMIN;
+  const pendingCount = usePendingApplicationsCount(isAdmin);
 
   return (
     <>
       <div className="hidden items-center gap-2 md:flex">
-        {isAdmin && <AdminMenu />}
+        {isAdmin && <AdminMenu pendingCount={pendingCount} />}
         {signedIn ? (
           <Button size="sm" nativeButton={false} render={<Link href="/me" />}>
             Profile
@@ -51,7 +53,12 @@ export function SiteHeaderAuth() {
           </>
         )}
       </div>
-      <SiteMobileNav items={mainNav} signedIn={signedIn} isAdmin={isAdmin} />
+      <SiteMobileNav
+        items={mainNav}
+        signedIn={signedIn}
+        isAdmin={isAdmin}
+        pendingApplicationsCount={pendingCount}
+      />
     </>
   );
 }

@@ -7,19 +7,28 @@ import { Dialog } from "@base-ui/react/dialog";
 
 import { adminNav } from "@/lib/admin-nav";
 import type { NavItem } from "@/lib/nav";
+import { PendingApplicationsBadge } from "@/components/admin/pending-applications-badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+
+const APPLICATIONS_HREF = "/admin/applications";
 
 type SiteMobileNavProps = {
   items: NavItem[];
   signedIn: boolean;
   isAdmin: boolean;
+  pendingApplicationsCount?: number;
 };
 
 const linkCls =
-  "block rounded-md px-3 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-accent";
+  "flex items-center justify-between gap-2 rounded-md px-3 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-accent";
 
-export function SiteMobileNav({ items, signedIn, isAdmin }: SiteMobileNavProps) {
+export function SiteMobileNav({
+  items,
+  signedIn,
+  isAdmin,
+  pendingApplicationsCount = 0,
+}: SiteMobileNavProps) {
   const [open, setOpen] = React.useState(false);
 
   function close() {
@@ -95,7 +104,12 @@ export function SiteMobileNav({ items, signedIn, isAdmin }: SiteMobileNavProps) 
                   className={linkCls}
                   onClick={close}
                 >
-                  {item.label}
+                  <span>{item.label}</span>
+                  {item.href === APPLICATIONS_HREF && (
+                    <PendingApplicationsBadge
+                      count={pendingApplicationsCount}
+                    />
+                  )}
                 </Link>
               ))}
             </div>

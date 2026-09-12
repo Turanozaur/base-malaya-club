@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { PendingApplicationsBadge } from "@/components/admin/pending-applications-badge";
 import { prisma } from "@/lib/prisma";
 import { UserStatus } from "@/generated/prisma/client";
 import { sortUsersByName } from "@/lib/user-sort";
@@ -17,13 +18,9 @@ export default async function ApplicationsPage() {
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-semibold tracking-tight">
+      <h1 className="mb-6 flex items-center gap-2 text-2xl font-semibold tracking-tight">
         Pending applications
-        {pending.length > 0 && (
-          <span className="ml-2 rounded-full bg-primary px-2 py-0.5 text-sm font-medium text-primary-foreground">
-            {pending.length}
-          </span>
-        )}
+        <PendingApplicationsBadge count={pending.length} size="md" />
       </h1>
 
       {pending.length === 0 ? (
