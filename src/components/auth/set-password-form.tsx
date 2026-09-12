@@ -8,16 +8,7 @@ import {
 } from "@/app/set-password/actions";
 import { PasswordInput } from "@/components/auth/password-input";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-
-function FieldError({ messages }: { messages?: string[] }) {
-  if (!messages?.length) return null;
-  return (
-    <p className="mt-1 text-xs text-destructive" role="alert">
-      {messages[0]}
-    </p>
-  );
-}
+import { FormField } from "@/components/ui/form-field";
 
 type Props = {
   token: string;
@@ -35,30 +26,32 @@ export function SetPasswordForm({ token }: Props) {
     <form action={formAction} className="space-y-4">
       <input type="hidden" name="token" value={token} />
 
-      <div>
-        <Label htmlFor="password">Password</Label>
+      <FormField
+        label="Password"
+        htmlFor="password"
+        error={errors.password}
+        hint="At least 8 characters with uppercase, lowercase, and a number."
+      >
         <PasswordInput
           id="password"
           name="password"
           autoComplete="new-password"
           aria-invalid={Boolean(errors.password?.length)}
         />
-        <FieldError messages={errors.password} />
-        <p className="mt-1.5 text-xs text-muted-foreground">
-          At least 8 characters with uppercase, lowercase, and a number.
-        </p>
-      </div>
+      </FormField>
 
-      <div>
-        <Label htmlFor="confirmPassword">Confirm password</Label>
+      <FormField
+        label="Confirm password"
+        htmlFor="confirmPassword"
+        error={errors.confirmPassword}
+      >
         <PasswordInput
           id="confirmPassword"
           name="confirmPassword"
           autoComplete="new-password"
           aria-invalid={Boolean(errors.confirmPassword?.length)}
         />
-        <FieldError messages={errors.confirmPassword} />
-      </div>
+      </FormField>
 
       {state?.message ? (
         <p className="text-sm text-destructive" role="alert">
