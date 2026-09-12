@@ -7,6 +7,8 @@ import { getStorageProvider } from "@/lib/storage";
 
 export const metadata: Metadata = { title: "News — BASE Malaya Club" };
 
+export const revalidate = 60;
+
 export default async function NewsPage() {
   const posts = await prisma.post.findMany({
     where: { type: PostType.NEWS, status: PostStatus.PUBLISHED },

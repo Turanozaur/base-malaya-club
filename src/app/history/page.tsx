@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 
 export const metadata: Metadata = { title: "History — BASE Malaya Club" };
 
+export const revalidate = 60;
+
 export default async function HistoryPage() {
   const page = await prisma.page.findUnique({ where: { slug: "history" } });
 

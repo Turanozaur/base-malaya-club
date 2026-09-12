@@ -36,58 +36,51 @@ function formatDate(date: Date) {
   });
 }
 
+const eventExploreInclude = {
+  object: { select: { name: true } },
+  coverImage: { select: { storageKey: true } },
+  _count: {
+    select: { registrations: { where: { status: "REGISTERED" as const } } },
+  },
+};
+
+const postExploreInclude = {
+  author: { select: { name: true } },
+  coverImage: { select: { storageKey: true } },
+};
+
+const memberDirectoryWhere = {
+  status: UserStatus.APPROVED,
+  showInMembersDirectory: true,
+  baseJumpCount: { gt: 0 },
+};
+
 export async function HomeExplore() {
   const now = new Date();
 
   const [
-    upcomingEvent,
-    latestEvent,
-    latestNews,
-    latestEducation,
+    publicEvents,
+    recentPosts,
     objects,
     historyPage,
     memberPreviewRaw,
-    memberCount,
     eventMedia,
     objectMedia,
-  ] = await Promise.all([
-    prisma.event.findFirst({
-      where: { ...publicEventsWhere(), startDate: { gte: now } },
-      include: {
-        object: { select: { name: true } },
-        coverImage: { select: { storageKey: true } },
-        _count: {
-          select: { registrations: { where: { status: "REGISTERED" } } },
-        },
-      },
-      orderBy: { startDate: "asc" },
-    }),
-    prisma.event.findFirst({
+  ] = await prisma.$transaction([
+    prisma.event.findMany({
       where: publicEventsWhere(),
-      include: {
-        object: { select: { name: true } },
-        coverImage: { select: { storageKey: true } },
-        _count: {
-          select: { registrations: { where: { status: "REGISTERED" } } },
-        },
-      },
+      include: eventExploreInclude,
       orderBy: { startDate: "desc" },
+      take: 30,
     }),
-    prisma.post.findFirst({
-      where: { type: PostType.NEWS, status: PostStatus.PUBLISHED },
-      include: {
-        author: { select: { name: true } },
-        coverImage: { select: { storageKey: true } },
+    prisma.post.findMany({
+      where: {
+        type: { in: [PostType.NEWS, PostType.EDUCATION] },
+        status: PostStatus.PUBLISHED,
       },
+      include: postExploreInclude,
       orderBy: { publishedAt: "desc" },
-    }),
-    prisma.post.findFirst({
-      where: { type: PostType.EDUCATION, status: PostStatus.PUBLISHED },
-      include: {
-        author: { select: { name: true } },
-        coverImage: { select: { storageKey: true } },
-      },
-      orderBy: { publishedAt: "desc" },
+      take: 20,
     }),
     prisma.baseObject.findMany({
       where: { isActive: true },
@@ -97,19 +90,8 @@ export async function HomeExplore() {
     }),
     prisma.page.findUnique({ where: { slug: "history" } }),
     prisma.user.findMany({
-      where: {
-        status: UserStatus.APPROVED,
-        showInMembersDirectory: true,
-        baseJumpCount: { gt: 0 },
-      },
+      where: memberDirectoryWhere,
       select: { id: true, name: true, email: true, image: true },
-    }),
-    prisma.user.count({
-      where: {
-        status: UserStatus.APPROVED,
-        showInMembersDirectory: true,
-        baseJumpCount: { gt: 0 },
-      },
     }),
     prisma.eventMedia.findMany({
       take: 12,
@@ -126,6 +108,17 @@ export async function HomeExplore() {
       include: { media: { select: { id: true, storageKey: true } } },
     }),
   ]);
+
+  const latestEvent = publicEvents[0] ?? null;
+  const upcomingEvent =
+    publicEvents
+      .filter((event) => event.startDate >= now)
+      .sort((a, b) => a.startDate.getTime() - b.startDate.getTime())[0] ?? null;
+  const latestNews =
+    recentPosts.find((post) => post.type === PostType.NEWS) ?? null;
+  const latestEducation =
+    recentPosts.find((post) => post.type === PostType.EDUCATION) ?? null;
+  const memberCount = memberPreviewRaw.length;
 
   const storage = getStorageProvider();
   const featuredEvent = upcomingEvent ?? latestEvent;

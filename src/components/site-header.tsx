@@ -1,19 +1,11 @@
 import Link from "next/link";
 
-import { getValidSessionUser } from "@/lib/auth-session";
 import { mainNav } from "@/lib/nav";
-import { Role } from "@/generated/prisma/client";
-import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { MalaysiaFlag } from "@/components/malaysia-flag";
-import { AdminMenu } from "@/components/admin-menu";
-import { SiteMobileNav } from "@/components/site-mobile-nav";
+import { SiteHeaderAuth } from "@/components/site-header-auth";
 
-export async function SiteHeader() {
-  const validSession = await getValidSessionUser();
-  const signedIn = Boolean(validSession);
-  const isAdmin = validSession?.user.role === Role.ADMIN;
-
+export function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border/40 bg-background/45 backdrop-blur-md supports-[backdrop-filter]:bg-background/35">
       <div className="mx-auto flex h-14 min-w-0 max-w-6xl items-center gap-2 px-4 sm:h-16 sm:gap-3 md:gap-4">
@@ -41,37 +33,7 @@ export async function SiteHeader() {
 
         <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
           <ThemeToggle />
-          <div className="hidden items-center gap-2 md:flex">
-            {isAdmin && <AdminMenu />}
-            {signedIn ? (
-              <Button size="sm" nativeButton={false} render={<Link href="/me" />}>
-                Profile
-              </Button>
-            ) : (
-              <>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  nativeButton={false}
-                  render={<Link href="/login" />}
-                >
-                  Sign in
-                </Button>
-                <Button
-                  size="sm"
-                  nativeButton={false}
-                  render={<Link href="/register" />}
-                >
-                  Join
-                </Button>
-              </>
-            )}
-          </div>
-          <SiteMobileNav
-            items={mainNav}
-            signedIn={signedIn}
-            isAdmin={isAdmin}
-          />
+          <SiteHeaderAuth />
         </div>
       </div>
     </header>

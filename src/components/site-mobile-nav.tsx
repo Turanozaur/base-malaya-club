@@ -73,6 +73,7 @@ export function SiteMobileNav({ items, signedIn, isAdmin }: SiteMobileNavProps) 
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch={false}
                 className={linkCls}
                 onClick={close}
               >
@@ -90,6 +91,7 @@ export function SiteMobileNav({ items, signedIn, isAdmin }: SiteMobileNavProps) 
                 <Link
                   key={item.href}
                   href={item.href}
+                  prefetch={false}
                   className={linkCls}
                   onClick={close}
                 >
@@ -104,7 +106,7 @@ export function SiteMobileNav({ items, signedIn, isAdmin }: SiteMobileNavProps) 
               <Button
                 className="w-full"
                 nativeButton={false}
-                render={<Link href="/me" onClick={close} />}
+                render={<Link href="/me" prefetch={false} onClick={close} />}
               >
                 Profile
               </Button>
@@ -114,14 +116,14 @@ export function SiteMobileNav({ items, signedIn, isAdmin }: SiteMobileNavProps) 
                   variant="outline"
                   className="w-full"
                   nativeButton={false}
-                  render={<Link href="/login" onClick={close} />}
+                  render={<Link href="/login" prefetch={false} onClick={close} />}
                 >
                   Sign in
                 </Button>
                 <Button
                   className="w-full"
                   nativeButton={false}
-                  render={<Link href="/register" onClick={close} />}
+                  render={<Link href="/register" prefetch={false} onClick={close} />}
                 >
                   Join
                 </Button>

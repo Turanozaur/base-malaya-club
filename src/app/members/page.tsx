@@ -10,6 +10,8 @@ import { sortUsersByName } from "@/lib/user-sort";
 
 export const metadata: Metadata = { title: "Members — BASE Malaya Club" };
 
+export const revalidate = 60;
+
 export default async function MembersPage() {
   const members = sortUsersByName(
     await prisma.user.findMany({
