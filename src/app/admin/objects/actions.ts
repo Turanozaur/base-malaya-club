@@ -68,7 +68,9 @@ export async function createObjectAction(
     return { error: "Failed to create object" };
   }
 
+  revalidatePath("/");
   revalidatePath("/objects");
+  revalidatePath("/gallery");
   revalidatePath("/admin/objects");
   redirect("/admin/objects");
 }
@@ -108,15 +110,24 @@ export async function updateObjectAction(
     return { error: "Failed to update object" };
   }
 
+  revalidatePath("/");
   revalidatePath("/objects");
   revalidatePath(`/objects/${slug}`);
+  revalidatePath("/gallery");
   revalidatePath("/admin/objects");
   redirect("/admin/objects");
 }
 
 export async function deleteObjectAction(id: string): Promise<void> {
   await requireAdmin();
+  const object = await prisma.baseObject.findUnique({
+    where: { id },
+    select: { slug: true },
+  });
   await prisma.baseObject.delete({ where: { id } });
+  revalidatePath("/");
   revalidatePath("/objects");
+  if (object) revalidatePath(`/objects/${object.slug}`);
+  revalidatePath("/gallery");
   revalidatePath("/admin/objects");
 }

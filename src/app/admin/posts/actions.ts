@@ -42,6 +42,16 @@ export type PostFormState = {
   fieldErrors?: Partial<Record<string, string[]>>;
 };
 
+function revalidatePostPaths(type: PostType, slug: string) {
+  revalidatePath("/");
+  revalidatePath("/news");
+  revalidatePath("/education");
+  revalidatePath("/admin/posts");
+  revalidatePath(
+    type === PostType.NEWS ? `/news/${slug}` : `/education/${slug}`,
+  );
+}
+
 export async function createPostAction(
   _prev: PostFormState,
   formData: FormData,
@@ -77,9 +87,7 @@ export async function createPostAction(
     return { error: "Failed to create post" };
   }
 
-  revalidatePath("/news");
-  revalidatePath("/education");
-  revalidatePath("/admin/posts");
+  revalidatePostPaths(type as PostType, slug);
   redirect("/admin/posts");
 }
 
@@ -122,16 +130,17 @@ export async function updatePostAction(
     return { error: "Failed to update post" };
   }
 
-  revalidatePath("/news");
-  revalidatePath("/education");
-  revalidatePath("/admin/posts");
+  revalidatePostPaths(type as PostType, slug);
+  if (existing.slug !== slug || existing.type !== type) {
+    revalidatePostPaths(existing.type, existing.slug);
+  }
+
   redirect("/admin/posts");
 }
 
 export async function deletePostAction(id: string): Promise<void> {
   await requireEditor();
+  const post = await prisma.post.findUniqueOrThrow({ where: { id } });
   await prisma.post.delete({ where: { id } });
-  revalidatePath("/news");
-  revalidatePath("/education");
-  revalidatePath("/admin/posts");
+  revalidatePostPaths(post.type, post.slug);
 }

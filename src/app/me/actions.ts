@@ -34,6 +34,7 @@ export async function updateProfilePrivacyAction(
     data: { showBirthDatePublicly: parsed.data.showBirthDatePublicly },
   });
 
+  revalidatePath("/");
   revalidatePath("/me");
   revalidatePath("/members");
   return { success: true };

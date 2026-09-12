@@ -65,8 +65,10 @@ export async function setUserStatusAction(
         console.error("[email] Password setup email failed:", err);
       });
     }
+    revalidatePath("/");
     revalidatePath(`/admin/users/${userId}`);
     revalidatePath("/admin/users");
+    revalidatePath("/members");
     return {};
   } catch (err) {
     console.error(err);
@@ -139,6 +141,7 @@ export async function setShowInMembersDirectoryAction(
     });
 
     await writeAuditLog(actor.id, "user.members_directory", userId, { show });
+    revalidatePath("/");
     revalidatePath(`/admin/users/${userId}`);
     revalidatePath("/members");
     return {};

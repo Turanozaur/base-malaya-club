@@ -58,6 +58,7 @@ export async function approveUserAction(
       });
     }
 
+    revalidatePath("/");
     revalidatePath("/admin/applications");
     revalidatePath("/admin/users");
     revalidatePath("/members");
@@ -107,6 +108,7 @@ export async function rejectUserAction(
       console.error("[email] Rejection email failed:", err);
     });
 
+    revalidatePath("/");
     revalidatePath("/admin/applications");
     revalidatePath("/admin/users");
     revalidatePath("/members");

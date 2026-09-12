@@ -41,6 +41,7 @@ export async function updatePageAction(
     create: { slug, title: parsed.data.title, body: parsed.data.body },
   });
 
+  revalidatePath("/");
   revalidatePath(`/${slug}`);
   revalidatePath("/admin/pages");
   return { success: true };
