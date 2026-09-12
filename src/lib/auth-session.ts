@@ -1,11 +1,10 @@
 import { redirect } from "next/navigation";
+import type { Session } from "next-auth";
 import type { Prisma } from "@/generated/prisma/client";
 import { UserStatus } from "@/generated/prisma/client";
 
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-
-type Session = NonNullable<Awaited<ReturnType<typeof auth>>>;
 
 async function findApprovedUser(userId: string) {
   const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -42,12 +41,21 @@ export async function redirectIfAuthenticated(redirectTo = "/me") {
   if (validSession) redirect(redirectTo);
 }
 
-type RequireSessionUserOptions = {
-  include?: Prisma.UserInclude;
+type RequireSessionUserOptions<I extends Prisma.UserInclude | undefined> = {
+  include?: I;
 };
 
+type UserWithInclude<I extends Prisma.UserInclude | undefined> = NonNullable<
+  Prisma.UserGetPayload<{ include: I extends undefined ? object : I }>
+>;
+
 /** Protected pages: require a live APPROVED user; clear stale sessions via route handler. */
-export async function requireSessionUser(options?: RequireSessionUserOptions) {
+export async function requireSessionUser<
+  I extends Prisma.UserInclude | undefined = undefined,
+>(options?: RequireSessionUserOptions<I>): Promise<{
+  session: Session;
+  user: UserWithInclude<I>;
+}> {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
 
@@ -60,5 +68,5 @@ export async function requireSessionUser(options?: RequireSessionUserOptions) {
     redirectToClearSession("/login");
   }
 
-  return { session, user };
+  return { session, user: user as UserWithInclude<I> };
 }
