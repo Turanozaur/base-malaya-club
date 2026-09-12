@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirectIfAuthenticated } from "@/lib/auth-session";
+import { AuthPageClose } from "@/components/auth/auth-page-close";
 import { LoginForm } from "@/components/auth/login-form";
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
@@ -21,6 +23,9 @@ export default async function LoginPage() {
         <CardHeader>
           <CardTitle>Sign in</CardTitle>
           <CardDescription>For approved club members only.</CardDescription>
+          <CardAction>
+            <AuthPageClose />
+          </CardAction>
         </CardHeader>
         <CardContent>
           <LoginForm />
